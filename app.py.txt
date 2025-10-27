@@ -1,0 +1,50 @@
+app.py (Main Streamlit App)
+import streamlit as st
+import pandas as pd
+import joblib
+import numpy as np
+from openai import OpenAI
+
+# --- Load Model & Data ---
+model = joblib.load("model_pipeline.joblib")
+df = pd.read_csv("cleaned_orders_data.csv")
+
+st.title("🍱 Cloud Kitchen Data Science Dashboard")
+
+# --- Section 1: EDA Preview ---
+st.subheader("📊 Dataset Overview")
+st.dataframe(df.head())
+
+st.write("### Basic Statistics")
+st.write(df.describe())
+
+# --- Section 2: Prediction ---
+st.subheader("💡 Predict Sales (Regression Example)")
+
+# Choose few features dynamically
+sample = {}
+for col in df.columns[:5]:  # pick first 5 columns for demo
+    val = st.number_input(f"Enter value for {col}", float(df[col].min()), float(df[col].max()), float(df[col].mean()))
+    sample[col] = val
+
+if st.button("Predict"):
+    X_input = pd.DataFrame([sample])
+    pred = model.predict(X_input)[0]
+    st.success(f"Predicted Sales: ₹{round(pred,2)}")
+
+# --- Section 3: GenAI Assistant ---
+st.subheader("🤖 Ask the Cloud Kitchen AI Assistant")
+
+api_key = st.text_input("Enter your OpenAI API Key:", type="password")
+user_query = st.text_area("Ask anything about your kitchen data:")
+
+if st.button("Ask AI") and api_key:
+    client = OpenAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a data science assistant for a cloud kitchen business."},
+            {"role": "user", "content": user_query},
+        ]
+    )
+    st.write("**AI:**", response.choices[0].message.content)
